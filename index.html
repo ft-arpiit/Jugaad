@@ -509,28 +509,58 @@ async function submitAuthAsync() {
 
 const TABS=[['home','Home','🏠'],['explore','Explore','📚'],['contribute','Contribute','📝'],['community','Community','🤝'],['profile','Profile','😎']];
 function openApp(){go('app');$('#tabs').innerHTML=TABS.map(t=>`<button data-t="${t[0]}" onclick="tab('${t[0]}')">${t[1]}</button>`).join('');$('#bn').innerHTML=TABS.map(t=>`<button data-t="${t[0]}" onclick="tab('${t[0]}')"><em>${t[2]}</em>${t[1]}</button>`).join('');tab('home')}
-function tab(t){$$('[data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t==t));$('#main').innerHTML='<div class="view">'+V[t]()+'</div>';window.scrollTo(0,0);bindTilt()}
+function tab(t){$$('[data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t==t));$('#main').innerHTML='<div class="view">'+V[t]()+'</div>';window.scrollTo(0,0);bindTilt();if(t==='explore'&&$('#resource-results'))loadResources().catch(e=>{console.error('Resource load failed:',e);const box=$('#resource-results');if(box)box.innerHTML='<p class="lead">Could not load resources. Check your connection and resources-table SELECT policy, then try again.</p>'})}
 const G=['#C96A3D','#C7A45A','#71806A','#C96A3D','#C7A45A','#71806A'];
 const gb=i=>`background:#24221F;border-top:3px solid ${G[i%6]}`;
 const BR={ECE:['Electronic Devices & Circuits','Network Theory','Signals & Systems'],CSE:['Data Structures','DBMS','Operating Systems'],EE:['Electrical Machines','Circuit Analysis','Control Systems'],ME:['Thermodynamics','Fluid Mechanics','Strength of Materials'],Civil:['Surveying','Structural Analysis','Concrete Tech'],IT:['Algorithms','Computer Networks','Web Tech'],Other:['Engineering Maths','Physics','Communication Skills']};
 const RT=['Best Notes','Quick Revision','PYQs','Important Questions','Recommended Lectures'];
-let ex={b:null,s:null,u:null,f:{t:'All',d:'All',o:'Most Useful'}};
-function resList(){const D=['Easy','Medium','Hard'];let l=RT.map((t,i)=>({t,d:D[i%3],u:96-i*7,n:i}));if(ex.f.t!='All')l=l.filter(r=>r.t==ex.f.t);if(ex.f.d!='All')l=l.filter(r=>r.d==ex.f.d);l.sort((a,b)=>ex.f.o=='Newest'?a.n-b.n:b.u-a.u);
- return l.length?l.map((r,i)=>`<div class="card tilt" style="border-top:3px solid ${G[i].split(',')[0]}"><b>${r.t}</b><p class="lead" style="margin:6px 0">${r.d} • ⭐ ${r.u}% found useful</p><button class="chip" onclick="toast('Saved ⭐')">Save</button></div>`).join(''):'<p class="lead">Nothing here yet. Be the first to contribute it!</p>'}
+let ex={b:null,s:null,u:null,f:{t:'All',d:'All',o:'Newest'}};
+let resourceSearch='';
+let loadedResources=[];
+let resourceLoadToken=0;
+const RESOURCE_BUCKET='jugaad-resources';
+const MAX_RESOURCE_BYTES=10*1024*1024;
+const ALLOWED_RESOURCE_EXTENSIONS=new Set(['pdf','doc','docx','ppt','pptx','png','jpg','jpeg','webp','gif']);
+function escapeHtml(value){return String(value??'').replace(/[&<>\"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[ch]))}
+function resourceExtension(name){const bits=String(name||'').toLowerCase().split('.');return bits.length>1?bits.pop():''}
+function formatBytes(bytes){if(!Number.isFinite(Number(bytes)))return '';const n=Number(bytes);return n<1024?`${n} B`:n<1024*1024?`${(n/1024).toFixed(1)} KB`:`${(n/(1024*1024)).toFixed(1)} MB`}
+function startResourceSearch(value){resourceSearch=String(value||'').trim();ex={b:null,s:null,u:null,f:{t:'All',d:'All',o:'Newest'}};tab('explore')}
+function clearResourceSearch(){resourceSearch='';tab('explore')}
+async function loadResources(){
+  const box=$('#resource-results');if(!box)return;
+  const token=++resourceLoadToken;box.innerHTML='<p class="lead">Loading real resources…</p>';
+  const {data,error}=await supabaseClient.from('resources').select('id,title,description,subject,branch,year,file_path,file_name,mime_type,file_size,uploader_id,created_at').order('created_at',{ascending:false}).limit(200);
+  if(error)throw error;
+  if(token!==resourceLoadToken||!$('#resource-results'))return;
+  let rows=data||[];
+  if(ex.b)rows=rows.filter(r=>String(r.branch||'').toLowerCase()===String(ex.b).toLowerCase());
+  if(ex.s)rows=rows.filter(r=>String(r.subject||'').toLowerCase().startsWith(String(ex.s).toLowerCase()));
+  if(ex.u)rows=rows.filter(r=>new RegExp('\\bunit\\s*'+ex.u+'\\b','i').test(String(r.subject||'')));
+  if(resourceSearch){const q=resourceSearch.toLowerCase();rows=rows.filter(r=>[r.title,r.description,r.subject,r.branch,String(r.year||'')].some(v=>String(v||'').toLowerCase().includes(q)))}
+  if(ex.f.o==='Oldest')rows.reverse();
+  loadedResources=rows;
+  if(!rows.length){box.innerHTML='<p class="lead">No uploaded resources match this view yet. Be the first to share something useful! 📚</p>';return}
+  box.innerHTML=rows.map(r=>`<article class="card" style="border-top:3px solid #C96A3D"><b>${escapeHtml(r.title)}</b><p class="lead" style="margin:6px 0">${escapeHtml(r.subject||'General resource')} · ${escapeHtml(r.branch||'All branches')} · Year ${escapeHtml(r.year??'—')}</p>${r.description?`<p style="margin:8px 0">${escapeHtml(r.description)}</p>`:''}<p class="lead" style="font-size:12px;margin:8px 0">${escapeHtml(r.file_name||'Attached file')} · ${escapeHtml(formatBytes(r.file_size))} · ${escapeHtml(new Date(r.created_at).toLocaleDateString())}</p><button class="btn" onclick="downloadResource('${escapeHtml(r.id)}')">DOWNLOAD ↗</button></article>`).join('');
+  bindTilt();
+}
+async function downloadResource(id){
+  const resource=loadedResources.find(r=>r.id===id);if(!resource){toast('Resource not found. Refresh Explore and try again.');return}
+  try{const {data,error}=await supabaseClient.storage.from(RESOURCE_BUCKET).createSignedUrl(resource.file_path,120,{download:resource.file_name||true});if(error)throw error;if(!data?.signedUrl)throw new Error('Could not create a download link.');const a=document.createElement('a');a.href=data.signedUrl;a.download=resource.file_name||'jugaad-resource';a.target='_blank';a.rel='noopener noreferrer';document.body.appendChild(a);a.click();a.remove()}catch(error){console.error('Download failed:',error);toast('Download failed: '+(error.message||'check Storage permissions'))}
+}
 function sel(k,opts){return`<select style="width:auto;display:inline-block;margin:3px" aria-label="${k}" onchange="ex.f['${k[0]}']=this.value;tab('explore')">${opts.map(o=>`<option ${ex.f[k[0]]==o?'selected':''}>${o}</option>`).join('')}</select>`}
 const V={
 home(){return`<h1 style="font-size:clamp(30px,5vw,48px);margin-top:10px">Yo, ${user.name.split(' ')[0]} 👋</h1><p class="lead" style="margin:6px 0">What are you learning today?</p>
-<input class="srch" placeholder="Search notes, PYQs, topics, people…" aria-label="Search" onkeydown="if(event.key=='Enter')tab('explore')">
+<input class="srch" placeholder="Search notes, PYQs, topics, people…" aria-label="Search" onkeydown="if(event.key==='Enter')startResourceSearch(this.value)">
 <div class="grid">${[['📚','EXPLORE','Notes, PYQs, lectures','explore'],['📝','CONTRIBUTE','Pass it forward','contribute'],['🤝','COMMUNITY','See what\'s happening','community'],['💡','REQUEST','Ask for what you need','community'],['🧭','ROADMAPS','Coming with the community','home']].map((c,i)=>`<button class="card big tilt" style="${gb(i)}" onclick="${c[3]=='home'?'toast(\'Roadmaps: coming with the community 🧭\')':`tab('${c[3]}')`}"><em>${c[0]}</em><b>${c[1]}</b><span>${c[2]}</span></button>`).join('')}</div>
 <h3 class="h2s">Alive right now</h3>${feed()}`},
-explore(){let h='<h2 style="margin:10px 0 6px">Explore</h2>';const bc=`<p class="lead" style="margin:0 0 14px">B.Tech → 2nd Year${ex.b?' → '+ex.b:''}${ex.s?' → '+ex.s:''}${ex.u?' → Unit '+ex.u:''}</p>`;
- if(!ex.b)return h+bc+`<div class="grid">${Object.keys(BR).map((b,i)=>`<button class="card big tilt" style="${gb(i)}" onclick="ex.b='${b}';tab('explore')"><em>${['📡','💻','⚡','⚙️','🏗️','🌐','✨'][i]}</em><b>${b}</b><span>${BR[b].length} subjects</span></button>`).join('')}</div>`;
+explore(){let h='<h2 style="margin:10px 0 6px">Explore</h2>';if(resourceSearch)return h+`<p class="lead">Search results for “${escapeHtml(resourceSearch)}”</p><button class="chip" onclick="clearResourceSearch()">← Clear search</button><div id="resource-results" class="grid" style="margin-top:12px"><p class="lead">Loading resources…</p></div>`;const bc=`<p class="lead" style="margin:0 0 14px">B.Tech → 2nd Year${ex.b?' → '+escapeHtml(ex.b):''}${ex.s?' → '+escapeHtml(ex.s):''}${ex.u?' → Unit '+ex.u:''}</p>`;
+ if(!ex.b)return h+bc+`<div class="grid">${Object.keys(BR).map((b,i)=>`<button class="card big tilt" style="${gb(i)}" onclick="ex.b='${b}';tab('explore')"><em>${['📡','💻','⚡','⚙️','🏗️','🌐','✨'][i]}</em><b>${b}</b><span>${BR[b].length} subjects</span></button>`).join('')}</div><h3 class="h2s">Recently shared</h3><div id="resource-results" class="grid"><p class="lead">Loading resources…</p></div>`;
  const back=`<button class="chip" onclick="${ex.u?'ex.u=null':ex.s?'ex.s=null':'ex.b=null'};tab('explore')">← Back</button>`;
- if(!ex.s)return h+bc+back+`<div class="grid" style="margin-top:12px">${BR[ex.b].map((s,i)=>`<button class="card big tilt" style="${gb(i+2)}" onclick="ex.s='${s}';tab('explore')"><b>${s}</b><span>5 units</span></button>`).join('')}</div>`;
- if(!ex.u)return h+bc+back+`<div class="grid" style="margin-top:12px">${[1,2,3,4,5].map(u=>`<button class="card big tilt" style="${gb(u)}" onclick="ex.u=${u};tab('explore')"><em>UNIT</em><b>${u}</b></button>`).join('')}</div>`;
- return h+bc+back+`<div style="margin:12px 0"><span class="lead">Filter:</span> ${sel('t Type',['All',...RT])}${sel('d Difficulty',['All','Easy','Medium','Hard'])}${sel('o Order',['Most Useful','Newest'])}</div><div class="grid">${resList()}</div>`},
+ if(!ex.s)return h+bc+back+`<div class="grid" style="margin-top:12px">${BR[ex.b].map((s,i)=>`<button class="card big tilt" style="${gb(i+2)}" onclick="ex.s='${s}';tab('explore')"><b>${s}</b><span>5 units</span></button>`).join('')}</div><h3 class="h2s">Recently shared in ${escapeHtml(ex.b)}</h3><div id="resource-results" class="grid"><p class="lead">Loading resources…</p></div>`;
+ if(!ex.u)return h+bc+back+`<div class="grid" style="margin-top:12px">${[1,2,3,4,5].map(u=>`<button class="card big tilt" style="${gb(u)}" onclick="ex.u=${u};tab('explore')"><em>UNIT</em><b>${u}</b></button>`).join('')}</div><h3 class="h2s">All resources for ${escapeHtml(ex.s)}</h3><div id="resource-results" class="grid"><p class="lead">Loading resources…</p></div>`;
+ return h+bc+back+`<div style="margin:12px 0"><label for="resource-order">Order</label> <select id="resource-order" style="width:auto;display:inline-block;margin:3px" onchange="ex.f.o=this.value;loadResources()"><option ${ex.f.o==='Newest'?'selected':''}>Newest</option><option ${ex.f.o==='Oldest'?'selected':''}>Oldest</option></select></div><div id="resource-results" class="grid"><p class="lead">Loading resources…</p></div>`},
 contribute(){return`<div class="cta tilt"><h2>KNOW SOMETHING USEFUL?<br>SHARE IT.</h2><p style="margin-top:8px">Someone out there might be looking for exactly what you already know.</p></div>
-<div class="grid">${[['📄','Upload Notes'],['📝','Share PYQs'],['🎥','Explain a Topic'],['🔗','Recommend a Resource'],['🤝','Become a Peer Mentor'],['🔍','Review Resources']].map((c,i)=>`<button class="card big tilt" style="${gb(i)}" onclick="openForm('${c[1]}')"><em>${c[0]}</em><b>${c[1]}</b></button>`).join('')}</div><div id="form"></div>`},
+<div class="grid">${[['📄','Upload Notes',true],['📝','Share PYQs',true],['🎥','Explain a Topic',true],['🔗','Recommend a Resource',false],['🤝','Become a Peer Mentor',false],['🔍','Review Resources',false]].map((c,i)=>`<button class="card big tilt" style="${gb(i)}" onclick="${c[2]?`openForm('${c[1]}')`:`showComingSoon('${c[1]}')`}"><em>${c[0]}</em><b>${c[1]}</b>${c[2]?'':'<span>Coming soon</span>'}</button>`).join('')}</div><div id="form"></div>`},
 community(){return`<h2 style="margin:10px 0">Community</h2>
 <div class="card"><b>📢 REQUEST SOMETHING</b><div class="row" style="margin-top:10px"><input id="rq" placeholder="I need concise notes for EDC Unit 3." style="flex:1;min-width:200px" aria-label="Request"><button class="btn" onclick="addReq()">Post</button></div></div>
 <h3 class="h2s">Request → Solved</h3><div id="rl">${reqs.map(rItem).join('')}</div>
@@ -566,8 +596,35 @@ async function logout(){
   }
 }
 
-function openForm(k){$('#form').innerHTML=`<div class="card" style="margin-top:16px"><h3>${k}</h3><label for="ft">Title</label><input id="ft" placeholder="e.g. EDC Unit 3 — diodes in 2 pages"><label for="fs">Subject & unit</label><input id="fs" placeholder="Electronic Devices & Circuits, Unit 3"><label for="fd">Tell people why it's useful</label><textarea id="fd" rows="3"></textarea><label for="ff">File (optional)</label><input id="ff" type="file"><button class="btn" style="margin-top:16px" onclick="sendC()">SUBMIT</button></div>`;$('#form').scrollIntoView({behavior:'smooth'})}
-async function sendC(){if(!$('#ft').value.trim()){$('#ft').focus();return}user.xp+=10;user.res++;await sync();$('#form').innerHTML=`<div class="card" style="margin-top:16px;text-align:center"><h2 class="gr">Contribution received 🚀</h2><p class="lead" style="margin:8px auto">Your knowledge just became someone else's shortcut.</p><p>+10 XP${user.res==1?' • 🌱 First Contribution unlocked':''}</p></div>`;const r=$('#form').getBoundingClientRect();burst(innerWidth/2,r.top+60)}
+function showComingSoon(kind){const box=$('#form');if(!box)return;box.innerHTML=`<div class="card" style="margin-top:16px"><h3>${escapeHtml(kind)}</h3><p class="lead">This contribution workflow isn't connected yet. Real file uploads are live for notes, PYQs, and topic explainers; this option will come next.</p></div>`;box.scrollIntoView({behavior:'smooth'})}
+function openForm(k){if(!user?.id){toast('Please log in before contributing.');return}const branchOptions=['ECE','CSE','EE','ME','Civil','IT','Other'];const yearMatch=String(user.year||'').match(/[1-4]/);const defaultYear=yearMatch?yearMatch[0]:'2';$('#form').innerHTML=`<div class="card" style="margin-top:16px"><h3>${escapeHtml(k)}</h3><label for="ft">Resource title</label><input id="ft" maxlength="140" placeholder="e.g. EDC Unit 3 — Diodes in 2 Pages" required><label for="fs">Subject</label><input id="fs" maxlength="100" placeholder="Electronic Devices & Circuits" required><label for="fu">Unit</label><select id="fu"><option value="1">Unit 1</option><option value="2">Unit 2</option><option value="3" selected>Unit 3</option><option value="4">Unit 4</option><option value="5">Unit 5</option><option value="0">Not unit-specific</option></select><div class="row" style="gap:12px;margin-top:8px"><div style="flex:1;min-width:140px"><label for="fb">Branch</label><select id="fb">${branchOptions.map(b=>`<option ${String(user.branch||'ECE').toUpperCase()===b.toUpperCase()?'selected':''}>${b}</option>`).join('')}</select></div><div style="flex:1;min-width:140px"><label for="fy">Year</label><select id="fy">${[1,2,3,4].map(y=>`<option value="${y}" ${String(defaultYear)===String(y)?'selected':''}>B.Tech ${y}${y===1?'st':y===2?'nd':y===3?'rd':'th'} Year</option>`).join('')}</select></div></div><label for="fd">Tell people why it's useful</label><textarea id="fd" rows="3" maxlength="1200" placeholder="What does this resource explain?"></textarea><label for="ff">Attach a file (required · max 10 MB)</label><input id="ff" type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.webp,.gif" required><p class="lead" style="font-size:12px;margin:6px 0">Accepted: PDF, Word, PowerPoint, and common images.</p><p id="upload-error" class="err" role="alert"></p><button id="upload-button" class="btn" style="margin-top:16px" onclick="sendC()">UPLOAD RESOURCE ↗</button></div>`;$('#form').scrollIntoView({behavior:'smooth'})}
+async function sendC(){
+  const titleEl=$('#ft'),subjectEl=$('#fs'),descriptionEl=$('#fd'),fileEl=$('#ff'),button=$('#upload-button'),errorEl=$('#upload-error');
+  if(!user?.id){if(errorEl)errorEl.textContent='Your session has expired. Please log in again.';return}
+  const title=titleEl?.value.trim()||'',subject=subjectEl?.value.trim()||'',description=descriptionEl?.value.trim()||'',file=fileEl?.files?.[0];
+  const branch=$('#fb')?.value||user.branch||'Other',year=Number($('#fy')?.value||2),unit=$('#fu')?.value||'0';
+  if(!title){titleEl?.focus();if(errorEl)errorEl.textContent='Add a title first.';return}
+  if(!subject){subjectEl?.focus();if(errorEl)errorEl.textContent='Add the subject first.';return}
+  if(!file){fileEl?.focus();if(errorEl)errorEl.textContent='Choose a file to upload.';return}
+  if(file.size>MAX_RESOURCE_BYTES){if(errorEl)errorEl.textContent='This file is larger than 10 MB. Choose a smaller file.';return}
+  const ext=resourceExtension(file.name);if(!ALLOWED_RESOURCE_EXTENSIONS.has(ext)){if(errorEl)errorEl.textContent='That file type is not supported. Choose a PDF, Word/PowerPoint file, or image.';return}
+  const mimeByExtension={pdf:'application/pdf',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',ppt:'application/vnd.ms-powerpoint',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',webp:'image/webp',gif:'image/gif'};
+  const mimeType=mimeByExtension[ext]||file.type||'application/octet-stream';
+  const safeName=file.name.normalize('NFKD').replace(/[^a-zA-Z0-9._-]+/g,'_').replace(/^\.+/,'').slice(-120)||`resource.${ext}`;
+  const path=`${user.id}/${crypto.randomUUID()}-${safeName}`;
+  if(errorEl)errorEl.textContent='';if(button){button.disabled=true;button.textContent='UPLOADING…'}
+  let uploaded=false;
+  try{
+    const {error:uploadError}=await supabaseClient.storage.from(RESOURCE_BUCKET).upload(path,file,{contentType:mimeType,upsert:false});
+    if(uploadError)throw new Error('File upload failed: '+uploadError.message);
+    uploaded=true;
+    const subjectValue=unit==='0'?subject:`${subject} — Unit ${unit}`;
+    const {data:resource,error:insertError}=await supabaseClient.from('resources').insert({title,description,subject:subjectValue,branch,year,file_path:path,file_name:file.name,mime_type:mimeType,file_size:file.size,uploader_id:user.id}).select('id').single();
+    if(insertError)throw new Error('The file uploaded, but saving its details failed: '+insertError.message);
+    user.xp=Number(user.xp||0)+10;user.res=Number(user.res||0)+1;await sync();
+    $('#form').innerHTML=`<div class="card" style="margin-top:16px;text-align:center"><h2 class="gr">Resource uploaded! 🚀</h2><p class="lead" style="margin:8px auto">Your file is now stored in JUGAAD and its details are saved.</p><p>+10 XP${user.res===1?' • 🌱 First Contribution unlocked':''}</p><button class="btn" onclick="tab('explore')">FIND IT IN EXPLORE ↗</button></div>`;const r=$('#form').getBoundingClientRect();burst(innerWidth/2,r.top+60);
+  }catch(error){console.error('Contribution upload failed:',error);if(uploaded){const {error:cleanupError}=await supabaseClient.storage.from(RESOURCE_BUCKET).remove([path]);if(cleanupError)console.error('Could not clean up unlinked file:',cleanupError)}if(errorEl)errorEl.textContent=error?.message||'Upload failed. Please try again.';toast('Resource was not published. Check the message in the form.');if(button){button.disabled=false;button.textContent='RETRY UPLOAD ↗'}}
+}
 function burst(x,y){for(let i=0;i<14;i++){const p=document.createElement('i');p.className='pt';p.style.cssText=`left:${x}px;top:${y}px;background:${['#C96A3D','#F3EFE6','#C7A45A','#B8B1A5'][i%4]}`;document.body.appendChild(p);const a=Math.random()*6.28,d=80+Math.random()*140;p.animate([{transform:'translate(0,0)',opacity:1},{transform:`translate(${Math.cos(a)*d}px,${Math.sin(a)*d}px)`,opacity:0}],{duration:900,easing:'ease-out'}).onfinish=()=>p.remove()}}
 function toast(t){const e=document.createElement('div');e.className='toast';e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),1800)}
 function bindTilt(){$$('.tilt').forEach(e=>{e.onpointermove=ev=>{const r=e.getBoundingClientRect(),x=(ev.clientX-r.left)/r.width-.5,y=(ev.clientY-r.top)/r.height-.5;e.style.transform=`perspective(700px) rotateY(${x*10}deg) rotateX(${-y*10}deg) translateY(-4px)`};e.onpointerleave=()=>e.style.transform=''})}
