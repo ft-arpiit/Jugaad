@@ -104,6 +104,34 @@ body:after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opac
 .feature-empty{padding:20px;border:1px dashed var(--bd);border-radius:14px;color:var(--m)}
 @media(max-width:600px){.feature-toolbar{grid-template-columns:1fr 1fr}.feature-toolbar label:first-child{grid-column:1/-1}.feature-actions .btn{flex:1}}
 
+
+/* JUGAAD 2.0: additive navigation and public information pages */
+#tabs{flex-wrap:wrap;justify-content:flex-end}
+#tabs button{white-space:nowrap}
+#tabs button.on{color:var(--t);background:var(--g);box-shadow:inset 0 0 0 1px var(--bd)}
+.public-shell{max-width:960px;margin:0 auto;padding:20px}
+.public-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:18px 0;border-bottom:1px solid var(--bd)}
+.public-links{display:flex;gap:8px;flex-wrap:wrap}
+.public-links button{background:transparent;border:1px solid var(--bd);color:var(--t);padding:9px 12px;border-radius:10px;cursor:pointer;font:600 13px Inter,sans-serif}
+.public-links button:hover,.public-links button.active{border-color:var(--p);color:var(--p)}
+.public-content{padding:34px 0 70px}
+.public-content h1{font-size:clamp(32px,5vw,52px);margin:14px 0}
+.public-content h2{font-size:24px;margin:26px 0 10px}
+.public-content p{color:var(--m);margin:8px 0 14px;max-width:760px}
+.public-footer{border-top:1px solid var(--bd);padding:22px 0 32px;color:var(--m);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.public-footer a,.social-link{color:var(--t);text-decoration:none;border-bottom:1px solid #C96A3D88;padding-bottom:2px}
+.faq-item{border:1px solid var(--bd);border-radius:12px;padding:14px 16px;margin:10px 0;background:#191816}
+.faq-item summary{cursor:pointer;font-weight:700}
+.faq-item p{margin:10px 0 0}
+.social-row{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0}
+.public-search{max-width:560px;margin:14px 0}
+@media(max-width:760px){
+ #tabs{display:flex;flex-wrap:nowrap;overflow-x:auto;max-width:100%;justify-content:flex-start;margin-left:0}
+ #tabs button{flex:0 0 auto}
+ .bar{flex-wrap:wrap;align-items:flex-start}
+ .bn{justify-content:flex-start;overflow-x:auto}
+ .bn button{flex:0 0 auto;min-width:66px}
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -132,11 +160,7 @@ const supabaseClient = window.supabase.createClient(
 <div class="sub">A student doesn't have to be only a learner.</div>
 <p>Learn from others. Share what you know. Build something bigger than yourself.</p><div class="eyebrow">Learn. Contribute. Lift Others.</div>
 <div class="row"><button class="btn" onclick="go('auth','up')">JOIN THE COMMUNITY →</button><button class="btn s" onclick="document.getElementById('eco').scrollIntoView()">EXPLORE THE ECOSYSTEM</button></div></div>
-<div class="stage" id="stage">
-<div class="fc" data-z="40" style="left:0;top:20px"><b>📚 EDC — Unit 3 Notes</b><small>⭐ 94% students found this useful</small></div>
-<div class="fc" data-z="70" style="right:0;top:90px;animation-delay:-2s"><b>📝 Network Theory — PYQs</b><small>🔥 127 students saved this</small></div>
-<div class="fc" data-z="55" style="left:20px;bottom:90px;animation-delay:-4s"><b>🎥 Signals & Systems — Quick Explanation</b><small>👤 Contributed by Ananya</small></div>
-<div class="fc" data-z="85" style="right:10px;bottom:10px;animation-delay:-1s"><b>🤝 Peer Mentor Available</b><small>ECE • 3rd Year</small></div></div></div>
+<div class="stage" id="stage" aria-label="Recently shared resources"></div></div></div>
 
 <section id="eco"><h2>Student ↔ Student. <span class="gr">We just connect you.</span></h2><p class="lead">Your notes might save someone's exam. Someone knows what you need.</p>
 <div class="grid">
@@ -149,12 +173,25 @@ const supabaseClient = window.supabase.createClient(
 
 <section><h2>Knowledge should move.</h2><p class="lead">Today's learner can become tomorrow's contributor. B.Tech community → broader student community → mentorship → access to learning → underserved students → real opportunities. One honest step at a time.</p></section>
 
-<section><h2>Where this is <span class="gr">going</span></h2><div class="tl" id="tl"></div></section>
+
 
 <section class="final"><svg viewBox="0 0 560 200" id="hands" aria-label="Connected glowing nodes"></svg>
 <blockquote>One hand can't do everything.<br><span class="gr">But when we hold each other's hands, we can take everyone forward.</span></blockquote>
 <button class="btn" onclick="go('auth','up')">JOIN THE COMMUNITY →</button></section>
+<footer class="public-footer" style="max-width:1080px;margin:0 auto;padding:24px 20px 36px"><span>JUGAAD by MIL · Find what you need. Share what you know.</span><div class="public-links"><button onclick="showPublicPage('about')">About</button><button onclick="showPublicPage('faq')">FAQ</button><button onclick="showPublicPage('contact')">Contact / Socials</button></div></footer>
 </div></div>
+
+<div id="public" class="view" hidden>
+  <div class="public-shell">
+    <div class="public-top">
+      <button class="logo" style="background:none;border:0;color:var(--t);cursor:pointer;text-align:left" onclick="go('landing')">JUGAA<i style="color:var(--p);font-style:normal">D</i><small style="display:block;color:var(--p);font:600 11px Inter,sans-serif">by MIL</small></button>
+      <div class="public-links" id="public-nav"></div>
+      <button class="btn s" onclick="go('auth','in')">Log in</button>
+    </div>
+    <main id="public-main" class="public-content"></main>
+    <footer class="public-footer"><span>JUGAAD by MIL · Find what you need. Share what you know.</span><div class="public-links"><button onclick="showPublicPage('about')">About</button><button onclick="showPublicPage('faq')">FAQ</button><button onclick="showPublicPage('contact')">Contact</button></div><div class="social-row" id="public-social-footer"></div></footer>
+  </div>
+</div>
 
 <div id="auth" class="view auth" hidden>
 <div class="l"><div class="logo" style="font-size:30px">JUGAA<i>D</i><small>by MIL</small></div><h2 style="font-size:40px;margin-top:8px">Student → Knowledge → <span class="gr">Student</span> → Community</h2></div>
@@ -182,7 +219,7 @@ let mode='up',user=null,profile=null;
 
 /* ========================= VIEW / AUTH NAVIGATION ========================= */
 function go(view, nextMode){
-  const views=['landing','auth','app'];
+  const views=['landing','auth','app','public'];
   views.forEach(id=>{
     const el=document.getElementById(id);
     if(el) el.hidden = id !== view;
@@ -521,9 +558,9 @@ async function submitAuthAsync() {
   }
 }
 
-const TABS=[['home','Home','🏠'],['explore','Explore','📚'],['contribute','Contribute','📝'],['community','Community','🤝'],['profile','Profile','😎']];
+const TABS=[['home','Home','🏠'],['explore','Explore','📚'],['library','Library','🗂️'],['contribute','Contribute','📝'],['community','Community','🤝'],['profile','Profile','😎'],['about','About','ℹ️'],['faq','FAQ','❔'],['contact','Contact','✉️']];
 function openApp(){go('app');$('#tabs').innerHTML=TABS.map(t=>`<button data-t="${t[0]}" onclick="tab('${t[0]}')">${t[1]}</button>`).join('');$('#bn').innerHTML=TABS.map(t=>`<button data-t="${t[0]}" onclick="tab('${t[0]}')"><em>${t[2]}</em>${t[1]}</button>`).join('');tab('home')}
-function tab(t){$$('[data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t==t));$('#main').innerHTML='<div class="view">'+V[t]()+'</div>';window.scrollTo(0,0);bindTilt();if(t==='explore'&&$('#resource-results'))loadResources().catch(e=>{console.error('Resource load failed:',e);const box=$('#resource-results');if(box)box.innerHTML='<p class="lead">Could not load resources. Check your connection and resources-table SELECT policy, then try again.</p>'});if(t==='profile')loadMyContributions().catch(e=>{console.error('Could not load your contributions:',e);const box=$('#my-contributions');if(box)box.innerHTML='<div class="card contribution-error"><b>We could not load your contributions.</b><p class="lead" style="margin:8px 0">Your delete controls appear here once JUGAAD can retrieve your uploads. Check the resources table SELECT policy or your connection.</p><button class="btn" onclick="loadMyContributions().catch(e=>{console.error(e);toast(\'Could not load contributions. Check the resources SELECT policy.\')})">RETRY LOADING ↻</button></div>'})}
+function tab(t){$$('[data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t==t));$('#main').innerHTML='<div class="view">'+V[t]()+'</div>';window.scrollTo(0,0);bindTilt();if((t==='explore'||t==='library')&&$('#resource-results'))loadResources().catch(e=>{console.error('Resource load failed:',e);const box=$('#resource-results');if(box)box.innerHTML='<p class="lead">Could not load resources. Check your connection and resources-table SELECT policy, then try again.</p>'});if(t==='profile')loadMyContributions().catch(e=>{console.error('Could not load your contributions:',e);const box=$('#my-contributions');if(box)box.innerHTML='<div class="card contribution-error"><b>We could not load your contributions.</b><p class="lead" style="margin:8px 0">Your delete controls appear here once JUGAAD can retrieve your uploads. Check the resources table SELECT policy or your connection.</p><button class="btn" onclick="loadMyContributions().catch(e=>{console.error(e);toast(\'Could not load contributions. Check the resources SELECT policy.\')})">RETRY LOADING ↻</button></div>'})}
 const G=['#C96A3D','#C7A45A','#71806A','#C96A3D','#C7A45A','#71806A'];
 const gb=i=>`background:#24221F;border-top:3px solid ${G[i%6]}`;
 const BR={ECE:['Electronic Devices & Circuits','Network Theory','Signals & Systems'],CSE:['Data Structures','DBMS','Operating Systems'],EE:['Electrical Machines','Circuit Analysis','Control Systems'],ME:['Thermodynamics','Fluid Mechanics','Strength of Materials'],Civil:['Surveying','Structural Analysis','Concrete Tech'],IT:['Algorithms','Computer Networks','Web Tech'],Other:['Engineering Maths','Physics','Communication Skills']};
@@ -599,10 +636,7 @@ async function deleteContribution(id){
 }
 function sel(k,opts){return`<select style="width:auto;display:inline-block;margin:3px" aria-label="${k}" onchange="ex.f['${k[0]}']=this.value;tab('explore')">${opts.map(o=>`<option ${ex.f[k[0]]==o?'selected':''}>${o}</option>`).join('')}</select>`}
 const V={
-home(){return`<h1 style="font-size:clamp(30px,5vw,48px);margin-top:10px">Yo, ${user.name.split(' ')[0]} 👋</h1><p class="lead" style="margin:6px 0">What are you learning today?</p>
-<input class="srch" placeholder="Search notes, PYQs, topics, people…" aria-label="Search" onkeydown="if(event.key==='Enter')startResourceSearch(this.value)">
-<div class="grid">${[['📚','EXPLORE','Notes, PYQs, lectures','explore'],['📝','CONTRIBUTE','Pass it forward','contribute'],['🤝','COMMUNITY','See what\'s happening','community'],['💡','REQUEST','Ask for what you need','community'],['🧭','ROADMAPS','Coming with the community','home']].map((c,i)=>`<button class="card big tilt" style="${gb(i)}" onclick="${c[3]=='home'?'toast(\'Roadmaps: coming with the community 🧭\')':`tab('${c[3]}')`}"><em>${c[0]}</em><b>${c[1]}</b><span>${c[2]}</span></button>`).join('')}</div>
-<h3 class="h2s">Alive right now</h3>${feed()}`},
+home(){return '<div></div>'},
 explore(){let h='<h2 style="margin:10px 0 6px">Explore</h2>';if(resourceSearch)return h+`<p class="lead">Search results for “${escapeHtml(resourceSearch)}”</p><button class="chip" onclick="clearResourceSearch()">← Clear search</button><div id="resource-results" class="grid" style="margin-top:12px"><p class="lead">Loading resources…</p></div>`;const bc=`<p class="lead" style="margin:0 0 14px">B.Tech → 2nd Year${ex.b?' → '+escapeHtml(ex.b):''}${ex.s?' → '+escapeHtml(ex.s):''}${ex.u?' → Unit '+ex.u:''}</p>`;
  if(!ex.b)return h+bc+`<div class="grid">${Object.keys(BR).map((b,i)=>`<button class="card big tilt" style="${gb(i)}" onclick="ex.b='${b}';tab('explore')"><em>${['📡','💻','⚡','⚙️','🏗️','🌐','✨'][i]}</em><b>${b}</b><span>${BR[b].length} subjects</span></button>`).join('')}</div><h3 class="h2s">Recently shared</h3><div id="resource-results" class="grid"><p class="lead">Loading resources…</p></div>`;
  const back=`<button class="chip" onclick="${ex.u?'ex.u=null':ex.s?'ex.s=null':'ex.b=null'};tab('explore')">← Back</button>`;
@@ -611,32 +645,27 @@ explore(){let h='<h2 style="margin:10px 0 6px">Explore</h2>';if(resourceSearch)r
  return h+bc+back+`<div style="margin:12px 0"><label for="resource-order">Order</label> <select id="resource-order" style="width:auto;display:inline-block;margin:3px" onchange="ex.f.o=this.value;loadResources()"><option ${ex.f.o==='Newest'?'selected':''}>Newest</option><option ${ex.f.o==='Oldest'?'selected':''}>Oldest</option></select></div><div id="resource-results" class="grid"><p class="lead">Loading resources…</p></div>`},
 contribute(){return`<div class="cta tilt"><h2>KNOW SOMETHING USEFUL?<br>SHARE IT.</h2><p style="margin-top:8px">Someone out there might be looking for exactly what you already know.</p></div>
 <div class="grid">${[['📄','Upload Notes',true],['📝','Share PYQs',true],['🎥','Explain a Topic',true],['🔗','Recommend a Resource',false],['🤝','Become a Peer Mentor',false],['🔍','Review Resources',false]].map((c,i)=>`<button class="card big tilt" style="${gb(i)}" onclick="${c[2]?`openForm('${c[1]}')`:`showComingSoon('${c[1]}')`}"><em>${c[0]}</em><b>${c[1]}</b>${c[2]?'':'<span>Coming soon</span>'}</button>`).join('')}</div><div id="form"></div>`},
-community(){return`<h2 style="margin:10px 0">Community</h2>
-<div class="card"><b>📢 REQUEST SOMETHING</b><div class="row" style="margin-top:10px"><input id="rq" placeholder="I need concise notes for EDC Unit 3." style="flex:1;min-width:200px" aria-label="Request"><button class="btn" onclick="addReq()">Post</button></div></div>
-<h3 class="h2s">Request → Solved</h3><div id="rl">${reqs.map(rItem).join('')}</div>
-<h3 class="h2s">🔥 Trending</h3><div class="grid">${['EDC Unit 3 notes • 94%','Network Theory PYQs • 127 saves','DSA cheat sheet • 88%'].map((t,i)=>`<div class="card tilt" style="border-left:3px solid ${G[i].split(',')[0]}">${t}</div>`).join('')}</div>
-<h3 class="h2s">💬 Live now</h3>${feed()}
-<h3 class="h2s">🤝 Peer mentors & 📚 study groups</h3><div class="grid">${['Ananya • ECE 3rd Year','Rahul • CSE 3rd Year','Study group: Signals night owls','Study group: DSA daily 7pm'].map(t=>`<div class="card">${t}<br><button class="chip" onclick="toast('Request sent 🤝')">Join</button></div>`).join('')}</div>`},
-profile(){const x=user.xp;return`<div class="card" style="margin-top:14px"><h2>${escapeHtml(user.name)}</h2><p class="lead" style="margin:0">@${escapeHtml(user.username)} • ${escapeHtml(user.branch)} • ${escapeHtml(user.year)}</p><div class="row" style="margin-top:8px">${['Learner','Contributor','Community Member'].map(r=>`<span class="chip">${r}</span>`).join('')}</div></div>
-<div class="grid" style="margin:16px 0">${[[user.res,'Resources'],[183,'Helpful votes'],[7,'Reviews'],[12,'Answers']].map(s=>`<div class="card stat"><b class="gr">${s[0]}</b>${s[1]}</div>`).join('')}</div>
-<div class="card"><b>${x} XP</b><div style="height:8px;border-radius:9px;background:var(--g);margin:10px 0"><div style="height:8px;border-radius:9px;width:${Math.min(100,x)}%;background:var(--p)"></div></div><small class="lead">+10 Contribution • +5 Review • +15 Solved request • +20 Mentorship</small></div>
-<div class="grid" style="margin:16px 0">${[['🌱','First Contribution',user.res>0],['🔥','Helpful Contributor',x>=30],['🧠','Subject Expert',false],['🤝','Peer Mentor',false],['🚀','Community Builder',false]].map(b=>`<div class="card ${b[2]?'':'lock'}" style="text-align:center"><em style="font-style:normal;font-size:30px">${b[0]}</em><br>${b[1]}</div>`).join('')}</div>
-<section id="my-contributions-section" style="padding:28px 0 8px"><h2 style="font-size:clamp(26px,4vw,36px)">Your contributions</h2><p class="lead" style="margin:8px 0 14px">Manage every file you have shared. Each item has its own preview, download, and delete controls.</p><button class="btn manage-contributions-btn" type="button" onclick="document.getElementById('my-contributions-section').scrollIntoView({behavior:'smooth',block:'start'});loadMyContributions().catch(e=>{console.error(e);toast('Could not load contributions. Check the resources SELECT policy.')})">📂 MANAGE MY CONTRIBUTIONS</button><div id="my-contribution-stats" class="dash-grid"><div class="card stat">Loading…</div></div><div id="my-contributions"><p class="lead">Loading your contributions…</p></div></section>
-<p class="lead">Your contribution matters.</p><button class="btn s" onclick="logout()">Log out</button>`}};
-const feed=()=>`<div class="grid">${['Rahul contributed Network Theory Unit 2 notes.','Priya requested help with Fourier Transform.','12 students found Arpit\'s EDC notes useful.'].map((t,i)=>`<div class="card tilt" style="border-left:3px solid ${G[i+1].split(',')[0]}">${t}</div>`).join('')}</div>`;
-const ST=['REQUEST','SOMEONE KNOWS IT','THEY CONTRIBUTE','SOLVED','COMMUNITY BENEFITS'];
-let reqs=[{t:'Priya: help with Fourier Transform',s:1},{t:'Need concise notes for EDC Unit 3',s:0}];
-const rItem=(r,i)=>`<div class="card" style="margin-bottom:10px"><b>${r.t}</b><div class="steps">${ST.map((s,j)=>`<span class="${j<=r.s?'on':''}">${s}</span>`).join('')}</div>${r.s<4?`<button class="chip" onclick="adv(${i})">${['I know this ✋','Contribute it','Mark solved'][Math.min(r.s,2)]}</button>`:'🎉 Solved. Everyone benefits.'}</div>`;
-function addReq(){const v=$('#rq').value.trim();if(!v)return;reqs.unshift({t:user.name.split(' ')[0]+': '+v,s:0});tab('community')}
-async function adv(i){reqs[i].s=Math.min(4,reqs[i].s+(reqs[i].s>=2?2:1));if(reqs[i].s>=3){user.xp+=15;await sync();burst(innerWidth/2,innerHeight/2)}tab('community')}
-async function sync(){
-  try {
-    await saveProfileChanges();
-  } catch(e) {
-    console.error('Sync failed:',e);
-  }
-}
-
+community(){return '<div></div>'},
+profile(){return '<div></div>'},
+library(){return `<h2 style="margin:10px 0 6px">Educational Library</h2><p class="lead">Browse the resources already shared with JUGAAD. Search, filter, preview and download through the existing resource pipeline.</p>${featureFilterBar()}<div id="resource-results" class="grid"><p class="lead">Loading real resources…</p></div><p class="note">Institution and course metadata will appear as it is supported by the records available in the current database.</p>`},
+about(){return `<h2 style="margin:10px 0 6px">About JUGAAD</h2><div class="card"><p class="lead">JUGAAD is a student-centred educational resource-sharing and community project by MIL.</p><h3>Why it exists</h3><p class="lead">Useful notes, previous-year questions, explanations and peer knowledge can be difficult to find in one place. JUGAAD aims to make learning resources easier to discover and make sharing knowledge a two-way habit.</p><h3>How it works today</h3><p class="lead">The current platform connects to Supabase for account access and the existing resource and community workflows. Students can explore available uploads, contribute through the available upload flow, ask academic questions and share explanations.</p><h3>JUGAAD 2.0 direction</h3><p class="lead">The next step is a more navigable educational library and community that can grow to serve students, mentors and participating institutions—without pretending that unconfigured roles or partnerships already exist.</p><p class="note">JUGAAD does not claim affiliation with any institution unless that relationship is explicitly confirmed.</p><div class="row"><button class="btn" onclick="tab('library')">EXPLORE LIBRARY ↗</button><button class="btn s" onclick="showPublicPage('faq')">READ FAQ</button></div></div>`},
+faq(){return `<h2 style="margin:10px 0 6px">Frequently Asked Questions</h2><p class="lead">Straight answers about what JUGAAD is and how the current version works.</p><input class="public-search" id="faq-search" placeholder="Search questions…" oninput="filterFaqs(this.value)" aria-label="Search FAQs"><div id="faq-list">
+${[
+['General','What is JUGAAD?','JUGAAD is a student-centred platform for discovering and sharing educational resources and helping one another through academic questions.'],
+['General','Who can use the platform?','Students can create an account and use the features currently available. Institution-wide publishing and special role permissions depend on future backend configuration.'],
+['General','Is JUGAAD affiliated with a particular institution?','No institutional affiliation is claimed here. Any future partnership will be described only after it is confirmed.'],
+['Students','How do I find resources?','Open Explore or Library and use the available search and filters. Results come from resources stored in the connected Supabase database.'],
+['Students','Can I download resources?','Available resources include preview and download actions, subject to file availability and the permissions configured in the backend.'],
+['Students','How can I ask for notes or ask a doubt?','Use the Community page to post an academic question. Resource-request workflows beyond the currently implemented question flow may require additional development.'],
+['Students','Why might I not be able to upload?','Uploads use the existing contribution workflow and backend permissions. A fully configured mentor-approval or institution-role system is not confirmed by this client file.'],
+['Institutions and mentors','How can an institution publish resources?','The current file does not establish a complete institution-account onboarding or institution-scoped publishing system. Contact the team to discuss a future integration.'],
+['Resources and community','Can I report an incorrect or inappropriate resource?','A dedicated report-and-removal workflow is not confirmed in the current interface. Contact the team using a configured contact channel.'],
+['Resources and community','What do Open, Answered and Resolved mean?','Community questions currently display their stored status, including a solved state when an answer is accepted. Other status labels depend on backend support.'],
+['Privacy and accounts','How is account access handled?','The current app uses Supabase authentication and session persistence. Data access also depends on the database policies configured for the project.'],
+['Privacy and accounts','What if I have a technical problem?','Use a configured contact channel listed on the Contact page. If no channel is configured yet, the links are intentionally hidden.']
+].map(([cat,q,a])=>`<details class="faq-item" data-faq="${escapeHtml((cat+' '+q+' '+a).toLowerCase())}"><summary>${escapeHtml(q)}</summary><p>${escapeHtml(a)}</p></details>`).join('')}</div>`},
+contact(){return `<h2 style="margin:10px 0 6px">Contact & Social Media</h2><p class="lead">Follow JUGAAD's updates or reach the team using links configured by the project owner. Unconfigured channels stay hidden—no invented accounts or broken links.</p><div class="card"><h3>Find JUGAAD online</h3><p class="lead">Add the real account URLs once they are ready. They are controlled from one configuration block in the source.</p><div id="contact-social" class="social-row"></div><p class="note">Social links and contact email are optional configuration values. This page does not pretend to send messages unless a real contact service is connected.</p></div>`}
+};
 async function logout(){
   try {
     await Auth.out();
@@ -692,7 +721,7 @@ function toast(t){const e=document.createElement('div');e.className='toast';e.te
 function bindTilt(){$$('.tilt').forEach(e=>{e.onpointermove=ev=>{const r=e.getBoundingClientRect(),x=(ev.clientX-r.left)/r.width-.5,y=(ev.clientY-r.top)/r.height-.5;e.style.transform=`perspective(700px) rotateY(${x*10}deg) rotateX(${-y*10}deg) translateY(-4px)`};e.onpointerleave=()=>e.style.transform=''})}
 /* landing bits */
 $('#ring').innerHTML=['LEARN','CREATE','CONTRIBUTE','HELP','CONNECT','GROW'].map((t,i)=>`<div class="nd" style="--a:${i*60-90}deg"><span>${t}</span></div>`).join('');
-$('#tl').innerHTML=['B.Tech 2nd Year','All Engineering','Classes 9–12','Skills & Competitive','Mentorship','Social Impact'].map((t,i)=>`<div class="card ${i>0?'lock':''}"><b class="gr">0${i+1}</b><br>${t}${i>0?'<br><small>Coming with the community.</small>':'<br><small>Live now ✨</small>'}</div>`).join('');
+
 (function(){let s='',P=[[60,120],[140,60],[220,130],[300,50],[380,125],[460,65],[515,130]];P.forEach((a,i)=>{if(i)s+=`<line x1="${P[i-1][0]}" y1="${P[i-1][1]}" x2="${a[0]}" y2="${a[1]}" stroke="#C96A3D" stroke-opacity=".6"/>`;if(i>1)s+=`<line x1="${P[i-2][0]}" y1="${P[i-2][1]}" x2="${a[0]}" y2="${a[1]}" stroke="#C7A45A" stroke-opacity=".3"/>`});P.forEach((a,i)=>s+=`<circle cx="${a[0]}" cy="${a[1]}" r="${9+i%3*3}" fill="${['#C7A45A','#C96A3D','#C96A3D','#C7A45A'][i%4]}"/>`);$('#hands').innerHTML=s})();
 /* 3D network canvas */
 const cv=$('#c'),cx=cv.getContext('2d');let W,H,mx=0,my=0,ry=0,N=[],E=[],mob=innerWidth<760;
@@ -747,6 +776,132 @@ async function openPublicProfile(id){const modal=document.createElement('div');m
 // Keep the original navigation and its contribution manager intact; add loading hooks for the new community views.
 const jugaadOriginalTab=tab;tab=function(t){jugaadOriginalTab(t);if(t==='community'){loadCommunityQuestions().catch(featureError);loadContributors().catch(featureError)}if(t==='profile')loadContributors('profile-contributors').catch(featureError)};
 // Add a helpful discovery header to the existing app search entry point.
+
+
+/* ================= REAL-DATA-ONLY ACTIVITY SURFACES =================
+   Render only persisted Supabase records. Empty data remains visually blank.
+*/
+async function loadLandingLiveResources(){
+  const stage=$('#stage'); if(!stage)return;
+  stage.replaceChildren();
+  try{
+    const {data,error}=await supabaseClient.from('resources').select('id,title,subject,branch,created_at').order('created_at',{ascending:false}).limit(4);
+    if(error)throw error;
+    if(!data?.length)return;
+    const positions=['left:0;top:20px','right:0;top:90px;animation-delay:-2s','left:20px;bottom:90px;animation-delay:-4s','right:10px;bottom:10px;animation-delay:-1s'];
+    data.forEach((r,i)=>{
+      const card=document.createElement('article');card.className='fc';card.style.cssText=positions[i]||`left:${(i%2)*48}%;top:${20+i*24}px`;
+      const title=document.createElement('b');title.textContent='📚 '+(r.title||'Untitled resource');
+      const meta=document.createElement('small');meta.textContent=[r.subject,r.branch,r.created_at?new Date(r.created_at).toLocaleDateString():''].filter(Boolean).join(' · ');
+      card.append(title,meta);stage.appendChild(card);
+    });
+  }catch(error){console.error('Landing live resources could not be loaded:',error);}
+}
+async function loadHomeLiveData(){
+  const section=$('#home-live-section'),resourcesBox=$('#home-live-resources'),questionsBox=$('#home-live-questions'),heading=$('#home-questions-heading');
+  if(!section||!resourcesBox||!questionsBox)return;
+  section.hidden=true;resourcesBox.replaceChildren();questionsBox.replaceChildren();if(heading)heading.hidden=true;
+  let hasRealActivity=false;
+  try{
+    const {data,error}=await supabaseClient.from('resources').select('id,title,subject,branch,created_at').order('created_at',{ascending:false}).limit(6);
+    if(error)throw error;
+    (data||[]).forEach(r=>{
+      const card=document.createElement('article');card.className='card';
+      const title=document.createElement('b');title.textContent=r.title||'Untitled resource';
+      const meta=document.createElement('p');meta.className='note';meta.textContent=[r.subject,r.branch,r.created_at?new Date(r.created_at).toLocaleDateString():''].filter(Boolean).join(' · ');
+      card.append(title,meta);resourcesBox.appendChild(card);hasRealActivity=true;
+    });
+  }catch(error){console.error('Home resource activity could not be loaded:',error);}
+  try{
+    const {data,error}=await supabaseClient.from('community_questions').select('id,title,subject,branch,status,created_at').order('created_at',{ascending:false}).limit(4);
+    if(error)throw error;
+    (data||[]).forEach(q=>{
+      const card=document.createElement('article');card.className='card';
+      const title=document.createElement('b');title.textContent=q.title||'Untitled question';
+      const meta=document.createElement('p');meta.className='note';meta.textContent=[q.subject,q.branch,q.status==='solved'?'Solved':'Open',q.created_at?new Date(q.created_at).toLocaleDateString():''].filter(Boolean).join(' · ');
+      card.append(title,meta);questionsBox.appendChild(card);hasRealActivity=true;
+    });
+    if(heading)heading.hidden=!(data||[]).length;
+  }catch(error){console.error('Home community activity could not be loaded:',error);}
+  section.hidden=!hasRealActivity;
+}
+V.home=function(){
+  return `<h1 style="font-size:clamp(30px,5vw,48px);margin-top:10px">Yo, ${escapeHtml(user.name.split(' ')[0])} 👋</h1>
+  <p class="lead" style="margin:6px 0">What are you learning today?</p>
+  <input class="srch" placeholder="Search notes, PYQs, topics, people…" aria-label="Search" onkeydown="if(event.key==='Enter')startResourceSearch(this.value)">
+  <div class="grid">
+    ${[['📚','EXPLORE','Notes, PYQs, lectures','explore'],['📝','CONTRIBUTE','Pass it forward','contribute'],['🤝','COMMUNITY','Questions from students','community'],['💡','REQUEST','Ask the community','community']].map((c,i)=>`<button class="card big tilt" style="${gb(i)}" onclick="tab('${c[3]}')"><em>${c[0]}</em><b>${c[1]}</b><span>${c[2]}</span></button>`).join('')}
+  </div>
+  <section id="home-live-section" hidden style="padding:28px 0">
+    <h3 class="h2s">Recently shared</h3><div id="home-live-resources" class="grid"></div>
+    <h3 class="h2s" id="home-questions-heading" hidden>Recent questions</h3><div id="home-live-questions" class="grid"></div>
+  </section>`;
+};
+const jugaadOriginalTabForLiveData=tab;
+tab=function(t){
+  if(['about','faq','contact'].includes(t)){
+    showPublicPage(t);
+    return;
+  }
+  jugaadOriginalTabForLiveData(t);
+  if(t==='home')loadHomeLiveData();
+};
+loadLandingLiveResources();
+
+/* ================= JUGAAD 2.0 PUBLIC PAGES / SOCIAL CONFIG =================
+   Replace these empty strings with verified, owner-controlled destinations.
+   Blank values are intentionally not rendered as links.
+*/
+const JUGAAD_LINKS={
+  INSTAGRAM_URL:'',
+  LINKEDIN_URL:'',
+  YOUTUBE_URL:'',
+  GITHUB_URL:'',
+  CONTACT_EMAIL:''
+};
+const PUBLIC_PAGES=[['about','About'],['faq','FAQ'],['contact','Contact']];
+function safeExternalUrl(value){
+  try{const u=new URL(value);return ['https:','http:'].includes(u.protocol)?u.href:''}catch{return ''}
+}
+function configuredSocialLinks(){
+  return [
+    ['📷','Instagram',JUGAAD_LINKS.INSTAGRAM_URL],
+    ['💼','LinkedIn',JUGAAD_LINKS.LINKEDIN_URL],
+    ['▶️','YouTube',JUGAAD_LINKS.YOUTUBE_URL],
+    ['⌘','GitHub',JUGAAD_LINKS.GITHUB_URL],
+    ['✉️','Email',JUGAAD_LINKS.CONTACT_EMAIL?(JUGAAD_LINKS.CONTACT_EMAIL.startsWith('mailto:')?JUGAAD_LINKS.CONTACT_EMAIL:'mailto:'+JUGAAD_LINKS.CONTACT_EMAIL):'']
+  ].map(([icon,label,url])=>({icon,label,url:label==='Email'?(url.startsWith('mailto:')?url:''):safeExternalUrl(url)})).filter(x=>x.url);
+}
+function renderSocialLinks(targetId){
+  const target=document.getElementById(targetId);if(!target)return;
+  target.innerHTML=configuredSocialLinks().map(x=>`<a class="social-link" href="${escapeHtml(x.url)}" ${x.label==='Email'?'':'target="_blank" rel="noopener noreferrer"'}>${x.icon} ${x.label}</a>`).join('');
+}
+function showPublicPage(page){
+  const target=document.getElementById('public-main');if(!target)return;
+  const valid=['about','faq','contact'];page=valid.includes(page)?page:'about';
+  go('public');
+  const buttons=PUBLIC_PAGES.map(([id,label])=>`<button class="${page===id?'active':''}" onclick="showPublicPage('${id}')">${label}</button>`).join('');
+  document.getElementById('public-nav').innerHTML=buttons;
+  if(page==='about'){
+    target.innerHTML=`<div class="eyebrow">Learn · Contribute · Lift Others</div><h1>Knowledge moves further when we share it.</h1><p>JUGAAD is an educational resource-sharing and student community project by MIL, built around one simple idea: a student should be able to learn from others and contribute what they know.</p><div class="grid"><article class="card"><h3>Discover</h3><p>Find available notes, PYQs and learning resources through the current resource library.</p></article><article class="card"><h3>Contribute</h3><p>Share useful material through the existing contribution flow and help another learner.</p></article><article class="card"><h3>Ask & explain</h3><p>Use the community question-and-answer flow to ask academic questions and share explanations.</p></article></div><h2>Where JUGAAD 2.0 is heading</h2><p>A more navigable library and community that can grow to include institutions and mentors as the required backend permissions and workflows are properly configured. No partnership, user count or verification claim is implied here.</p><div class="row"><button class="btn" onclick="go('auth','up')">JOIN THE COMMUNITY →</button><button class="btn s" onclick="showPublicPage('faq')">READ FAQ</button></div>`;
+  }else if(page==='faq'){
+    target.innerHTML=V.faq();
+  }else{
+    target.innerHTML=V.contact();
+  }
+  renderSocialLinks('contact-social');renderSocialLinks('public-social-footer');
+  window.scrollTo(0,0);
+}
+function filterFaqs(value){
+  const q=String(value||'').trim().toLowerCase();
+  document.querySelectorAll('#faq-list [data-faq]').forEach(item=>{item.hidden=!!q&&!item.dataset.faq.includes(q)});
+}
+const jugaadOriginalGo=go;
+go=function(view,nextMode){
+  jugaadOriginalGo(view,nextMode);
+  if(view==='public'&&!document.getElementById('public-main')?.innerHTML)showPublicPage('about');
+};
+renderSocialLinks('public-social-footer');
 
 restoreSession();
 </script></body></html>
